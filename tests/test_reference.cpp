@@ -54,7 +54,8 @@ void random_reference_test(){
  Shape s{3,32,64,16,4,16};
  auto a=make_weights(s,9),b=make_weights(s,9);
  assert(a.packed==b.packed&&a.scales==b.scales);
- auto x=make_inputs(s,9),y=reference_forward(a,x);
+ auto x=make_inputs(s,9);
+ auto y=reference_forward(a,x);
  for(float v:y)assert(std::isfinite(v));
  assert(y.size()==std::size_t(s.batch*s.hidden));
 }
