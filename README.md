@@ -31,6 +31,10 @@ Run `scripts/profile.sh build-gpu` to collect kernel profiling metrics (requires
 - CUDA event timings, a correctness comparison, basic CSV output, and a separate streaming-read bandwidth probe.
 - Synthetic layer shapes: small correctness fixture and Qwen3-30B-A3B-sized MoE layer. Real model weights and optimized Marlin layouts are **not** included.
 
+## Handing off to another coding agent
+
+Start with **[AGENTS.md](AGENTS.md)** for the receiving agent's instructions, then follow the prioritized **[ROADMAP.md](ROADMAP.md)**, the technical **[SPEC.md](SPEC.md)**, and verified **[STATUS.md](STATUS.md)**. Check GitHub Actions on the latest commit before making performance claims.
+
 ## Planned next changes
 
 1. Get the CUDA implementation compiling and correctness checked on RTX 3090, then run `compute-sanitizer`.
