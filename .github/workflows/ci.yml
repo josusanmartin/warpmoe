@@ -1,0 +1,22 @@
+name: WarpMoE CI
+on: [push, pull_request, workflow_dispatch]
+jobs:
+  cpu:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+      - run: cmake --build build --parallel 4
+      - run: ctest --test-dir build --output-on-failure
+  cuda-compile:
+    runs-on: ubuntu-24.04
+    container:
+      image: nvidia/cuda:12.6.3-devel-ubuntu24.04
+    steps:
+      - run: |
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends git cmake g++ python3
+      - uses: actions/checkout@v4
+      - run: cmake -S . -B build-gpu -DCMAKE_BUILD_TYPE=Release -DWARPMOE_REQUIRE_CUDA=ON -DCMAKE_CUDA_ARCHITECTURES=86
+      - run: cmake --build build-gpu --parallel 4
+      - run: ctest --test-dir build-gpu --output-on-failure
