@@ -1,36 +1,33 @@
-# WarpMoE v0.1 build status — 2026-10-13
+# WarpMoE — Verified status and blockers
 
-## Verified in this environment
+Updated 2026-10-13 (America/Los_Angeles) during agent handoff.
 
-- CMake configures with the CPU-only fallback when CUDA is missing.
-- CPU reference library and tests compile with GCC.
-- `ctest` passes CPU reference tests and Python roofline tests.
-- `scripts/roofline.py --batch 1 --bandwidth-gbs 800 --baseline-us 40` reports 18 MiB of expert weights and a 23.593 us theoretical streaming floor.
+## GitHub repository
 
-## Not yet verified
+Repository: https://github.com/josusanmartin/warpmoe
+Default branch: `main`. Source of truth: [SPEC.md](SPEC.md), [ROADMAP.md](ROADMAP.md), and [AGENTS.md](AGENTS.md).
 
-- `nvcc` compilation of `cuda/kernels.cu` and `src/cuda_bench.cu`.
-- Actual CUDA results, cross-CTA readiness protocol under Compute Sanitizer, Nvidia graph captures, or GPU performance.
-- Practical RTX 3090 bandwidth, optimized Marlin/vLLM baseline, or claimed latency speedup.
+## Confirmed observations
 
-The CUDA scaffold uses **INT4 weights and FP32 activations** for tractable correctness testing; BF16 activations/intermediates and an optimized Marlin-compatible layout are not implemented yet.
+- Local CPU-only CMake build and ctest on the model's working container passed **2/2 tests**.
+- GitHub CI run [38502435291](https://github.com/josusanmartin/warpmoe/actions/runs/38502435291) failed in **both** CPU and CUDA compile jobs because `tests/test_reference.cpp` had `auto x=make_inputs(s,9),y=reference_forward(a,x);` (two different types in a single `auto` declaration). CUDA compilation reached `libwarpmoe_cuda.a` before the CPU-test error aborted the CUDA build; this **does not establish a fully passing CUDA build**.
+- Corrective commit `5ab5fd4e702afe4cb60ccf852ee09af0bb47ea33` splits that declaration into two statements. The latest CI run must be checked to verify the fix.
+- The repository currently implements an initial model-parameterized INT4/FP32 (**W4A32**) CPU oracle, two-stage CUDA scaffold, persistent ticket scheduler, timing harness, and streaming-bandwidth microbenchmark.
 
-The current machine lacks `nvcc` and NVIDIA GPU driver/device access. **Do not describe the CUDA executable as tested or fast.**
+## Not yet verified / do not claim
 
-## First commands to run on an RTX 3090 workstation
+- Passing post-fix CI on latest main (until checked).
+- Complete CUDA binary compilation + linking, or GPU execution on real NVIDIA hardware.
+- compute-sanitizer memcheck/racecheck of the persistent readiness protocol.
+- Marlin/vLLM optimized, CUDA-graph-captured W4A16 baseline on RTX 3090.
+- Practical GPU bandwidth, real DRAM bytes, layer p50/p99, end-to-end tokens/s, or any actual speedup.
+- BF16 activation path, prepermuted/coalesced weights, `cp.async` prefetch, adaptive GEMV/GEMM worker selection, real-model integration.
 
-```bash
-cmake -S . -B build-gpu -DCMAKE_BUILD_TYPE=Release \
-    -DWARPMOE_REQUIRE_CUDA=ON -DCMAKE_CUDA_ARCHITECTURES=86
-cmake --build build-gpu -j
-ctest --test-dir build-gpu --output-on-failure
-scripts/gpu_smoke.sh build-gpu
-./build-gpu/warpmoe_bandwidth --mib 512 --iters 30
-./build-gpu/warpmoe_bench --shape qwen --batch 1 --iters 40
-```
+## Next actions
 
-Before drawing any performance conclusions, fix any compiler, sanitizer or correctness errors, then capture the actual optimized (graph-based) MoE baseline for comparison.
+1. Review newest GitHub Actions results and address any remaining CPU/CUDA compiler failures.
+2. On Linux with RTX 3090, run `cmake`/`ctest` and `bash scripts/gpu_smoke.sh build-gpu`.
+3. Establish optimized graph-captured W4A16 baseline and sustained bandwidth **before** developing a more sophisticated scheduler.
+4. Follow [ROADMAP.md](ROADMAP.md) sequentially and record exact commands, results, commit hashes in this file.
 
-## GitHub readiness
-
-Added `.github/workflows/ci.yml` with CPU tests and a CUDA toolkit compile-only job, and an opt-in `scripts/publish_github.sh` that creates a private repository after confirmation. This workflow file has not yet run on GitHub Actions.
+The initial project is **research scaffolding**, not a validated performant GPU runtime.
